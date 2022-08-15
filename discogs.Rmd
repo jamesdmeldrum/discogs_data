@@ -1,0 +1,198 @@
+---
+title: "Discogs"
+output: html_document
+date: "2022-08-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+set.seed(1)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+```
+
+```{r}
+# Read data
+raw_data <- read.csv('../discogs_20220501_releases.csv')
+head(raw_data)
+```
+```{r}
+sample <- sample_n(raw_data, 1000)
+```
+
+```{r}
+format_counts <- sample %>%
+  group_by(format_) %>%
+  summarise(counts = n())
+format_counts <- format_counts[order(format_counts$counts, decreasing = TRUE),]
+
+formats_plot <- format_counts %>%
+  ggplot(aes(x = format_, y = counts)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+formats_plot
+```
+
+```{r}
+country_counts <- sample %>%
+  group_by(country) %>%
+  summarise(counts = n())
+country_counts <- country_counts[order(country_counts$counts, decreasing = TRUE),]
+
+country_plot <- country_counts %>%
+  ggplot(aes(x = country, y = counts)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+country_plot
+```
+
+
+```{r}
+library("rnaturalearth")
+library("rnaturalearthdata")
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+```
+
+```{r}
+sample[sample == "United Kingdom"] <- "UK"
+sample[sample == "United States of America"] <- "USA"
+sample[sample == "US"] <- "USA"
+country_counts <- sample %>%
+  group_by(country) %>%
+  summarise(counts = n())
+country_counts <- country_counts[order(country_counts$counts, decreasing = TRUE),]
+head(country_counts)
+```
+
+
+```{r}
+country_dat <- data.frame(region = as.character(),
+                             count = as.numeric())
+
+for (cntry in unique(mapdata$region)) {
+  specific_row <- filter(country_counts, country == cntry)
+  if (nrow(specific_row) == 0) {
+    num <- 0
+  } else {
+    num <- specific_row$counts
+  }
+  country_dat[nrow(country_dat)+1,] <- c(cntry, num)
+}
+
+country_dat$count <- as.numeric(country_dat$count)
+
+country_dat <- country_dat[order(country_dat$count, decreasing = T),]
+country_dat
+```
+
+```{r}
+mapdata <- map_data("world")
+
+texts <- c()
+for (i in 1:nrow(country_dat)) {
+  country_name <- country_dat[i,]$region
+  count <- country_dat[i,]$count
+  
+  text = paste(paste(country_name, "Count:", sep = "\n"), count, sep = " ")
+  texts[length(texts)+1] <- text
+}
+
+country_dat$texts <- texts
+
+mapdata <- left_join(mapdata, country_dat, by = "region")
+mapdata <- filter(mapdata, count != 0)
+```
+
+```{r}
+mapplot <- ggplot(mapdata, aes(x = long, y = lat, group = group, text = texts)) +
+  geom_polygon(aes(fill = count)) +
+  scale_fill_gradient(name = "sScale", trans = "log", breaks = c(1,10,50,250)) +
+  ggtitle("Release Count by Country")
+interactive <- plotly::ggplotly(mapplot)
+```
+
+```{r}
+strsplit(interactive$x$data[[1]]$text, "<")[[1]][1]
+```
+
+
+```{r}
+for (i in 1:length(interactive$x$data)) {
+  text_pre <- interactive$x$data[[i]]$text
+  text_post <- strsplit(text_pre, "<")[[1]][1]
+  interactive$x$data[[i]]$text <- text_post
+}
+```
+
+```{r}
+interactive
+```
+
+
+```{r}
+plot_countries <- function(dat) {
+  dat[dat == "United Kingdom"] <- "UK"
+  dat[dat == "United States of America"] <- "USA"
+  dat[dat == "US"] <- "USA"
+  country_counts <- dat %>%
+    group_by(country) %>%
+    summarise(counts = n())
+  country_counts <- country_counts[order(country_counts$counts, decreasing = TRUE),]
+  # head(country_counts)
+  
+  country_dat <- data.frame(region = as.character(),
+                             count = as.numeric())
+
+  for (cntry in unique(mapdata$region)) {
+      specific_row <- filter(country_counts, country == cntry)
+      if (nrow(specific_row) == 0) {
+        num <- 0
+      } else {
+        num <- specific_row$counts
+      }
+      country_dat[nrow(country_dat)+1,] <- c(cntry, num)
+  }
+  
+  country_dat$count <- as.numeric(country_dat$count)
+  
+  country_dat <- country_dat[order(country_dat$count, decreasing = T),]
+  
+  mapdata <- map_data("world")
+
+  texts <- c()
+  for (i in 1:nrow(country_dat)) {
+    country_name <- country_dat[i,]$region
+    count <- country_dat[i,]$count
+    
+    text = paste(paste(country_name, "Count:", sep = "\n"), count, sep = " ")
+    texts[length(texts)+1] <- text
+  }
+  
+  country_dat$texts <- texts
+  
+  mapdata <- left_join(mapdata, country_dat, by = "region")
+  mapdata <- filter(mapdata, count != 0)
+  
+  mapplot <- ggplot(mapdata, aes(x = long, y = lat, group = group, text = texts)) +
+    geom_polygon(aes(fill = count)) +
+    scale_fill_gradient(name = "sScale", trans = "log", breaks = c(1,10,50,250)) +
+    ggtitle("Release Count by Country")
+  interactive <- plotly::ggplotly(mapplot)
+  
+  return(interactive)
+}
+```
+
+```{r}
+map <- plot_countries(raw_data)
+for (i in 1:length(map$x$data)) {
+  text_pre <- map$x$data[[i]]$text
+  text_post <- strsplit(text_pre, "<")[[1]][1]
+  map$x$data[[i]]$text <- text_post
+}
+map
+```
+
+
