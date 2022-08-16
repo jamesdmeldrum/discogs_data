@@ -126,7 +126,7 @@ plot_countries <- function(dat) {
   
   mapplot <- ggplot(mapdata, aes(x = long, y = lat, group = group, text = texts)) +
     geom_polygon(aes(fill = count, colour = Format)) +
-    scale_fill_viridis_c(option ="plasma", name = "Number of Releases", trans = "log", breaks = c(1, 10, 100, 10000, 100000, 1000000, 10000000)) +
+    scale_fill_viridis_c(option ="plasma", name = "Number of Releases", trans = "log", breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000, 10000000)) +
     ggtitle("Discogs Release Data by Country, Format") +
     # xlab("Longitude") +
     # ylab("Latitude") +

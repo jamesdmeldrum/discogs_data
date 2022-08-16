@@ -1,0 +1,48 @@
+---
+title: "Data date editing"
+output: html_document
+date: "2022-08-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+set.seed(1)
+```
+
+```{r}
+raw_data <- read.csv("discogs_20220501_releases.csv")
+sample <- sample_n(raw_data, 10000)
+```
+
+
+```{r}
+df <- raw_data
+
+years <- c()
+for (i in 1:nrow(df)) {
+  years[length(years)+1] <- substr(df$released[i],1,4)
+}
+
+year_counts <- df %>%
+  group_by(year) %>%
+  summarise(counts = n())
+year_counts <- year_counts[order(year_counts$counts, decreasing = TRUE),]
+```
+
+```{r}
+df[df == '１９７８'] <- "1978"
+
+df$year <- as.numeric(years)
+
+year_counts <- df %>%
+  group_by(year) %>%
+  summarise(counts = n())
+year_counts <- year_counts[order(year_counts$counts, decreasing = TRUE),]
+
+df <- filter(df, year > 1000)
+```
+```{r}
+sum(year_counts$counts)/nrow(raw_data)
+```
+
