@@ -11,7 +11,7 @@ set.seed(1)
 ```
 
 ```{r}
-raw_data <- read.csv("discogs_20220501_releases.csv")
+raw_data <- read.csv("../discogs_20220501_releases.csv")
 sample <- sample_n(raw_data, 10000)
 ```
 
