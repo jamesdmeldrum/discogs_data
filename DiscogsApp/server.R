@@ -19,7 +19,7 @@ library("rnaturalearthdata")
 
 print("Reading data.")
 if (!(exists("df") & is.data.frame(df))) {
-  df <- read.csv("../../dat_with_years.csv")
+  df <- read.csv("../../dat_with_years_reduced.csv")
   print("Data read.")
 } else {
   print("Data already loaded, how good")
