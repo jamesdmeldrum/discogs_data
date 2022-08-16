@@ -10,6 +10,7 @@ set.seed(1)
 library(dplyr)
 library(ggplot2)
 library(plotly)
+library(ggthemes)
 ```
 
 ```{r}
@@ -67,133 +68,6 @@ head(country_counts)
 ```
 
 
-```{r}
-country_dat <- data.frame(region = as.character(),
-                             count = as.numeric())
-
-for (cntry in unique(mapdata$region)) {
-  specific_row <- filter(country_counts, country == cntry)
-  if (nrow(specific_row) == 0) {
-    num <- 0
-  } else {
-    num <- specific_row$counts
-  }
-  country_dat[nrow(country_dat)+1,] <- c(cntry, num)
-}
-
-country_dat$count <- as.numeric(country_dat$count)
-
-country_dat <- country_dat[order(country_dat$count, decreasing = T),]
-country_dat
-```
-
-```{r}
-mapdata <- map_data("world")
-
-texts <- c()
-for (i in 1:nrow(country_dat)) {
-  country_name <- country_dat[i,]$region
-  count <- country_dat[i,]$count
-  
-  text = paste(paste(country_name, "Count:", sep = "\n"), count, sep = " ")
-  texts[length(texts)+1] <- text
-}
-
-country_dat$texts <- texts
-
-mapdata <- left_join(mapdata, country_dat, by = "region")
-mapdata <- filter(mapdata, count != 0)
-```
-
-```{r}
-mapplot <- ggplot(mapdata, aes(x = long, y = lat, group = group, text = texts)) +
-  geom_polygon(aes(fill = count)) +
-  scale_fill_gradient(name = "sScale", trans = "log", breaks = c(1,10,50,250)) +
-  ggtitle("Release Count by Country")
-interactive <- plotly::ggplotly(mapplot)
-```
-
-```{r}
-strsplit(interactive$x$data[[1]]$text, "<")[[1]][1]
-```
-
-
-```{r}
-for (i in 1:length(interactive$x$data)) {
-  text_pre <- interactive$x$data[[i]]$text
-  text_post <- strsplit(text_pre, "<")[[1]][1]
-  interactive$x$data[[i]]$text <- text_post
-}
-```
-
-```{r}
-interactive
-```
-
-
-```{r}
-plot_countries <- function(dat) {
-  dat[dat == "United Kingdom"] <- "UK"
-  dat[dat == "United States of America"] <- "USA"
-  dat[dat == "US"] <- "USA"
-  country_counts <- dat %>%
-    group_by(country) %>%
-    summarise(counts = n())
-  country_counts <- country_counts[order(country_counts$counts, decreasing = TRUE),]
-  # head(country_counts)
-  
-  country_dat <- data.frame(region = as.character(),
-                             count = as.numeric())
-
-  for (cntry in unique(mapdata$region)) {
-      specific_row <- filter(country_counts, country == cntry)
-      if (nrow(specific_row) == 0) {
-        num <- 0
-      } else {
-        num <- specific_row$counts
-      }
-      country_dat[nrow(country_dat)+1,] <- c(cntry, num)
-  }
-  
-  country_dat$count <- as.numeric(country_dat$count)
-  
-  country_dat <- country_dat[order(country_dat$count, decreasing = T),]
-  
-  mapdata <- map_data("world")
-
-  texts <- c()
-  for (i in 1:nrow(country_dat)) {
-    country_name <- country_dat[i,]$region
-    count <- country_dat[i,]$count
-    
-    text = paste(paste(country_name, "Count:", sep = "\n"), count, sep = " ")
-    texts[length(texts)+1] <- text
-  }
-  
-  country_dat$texts <- texts
-  
-  mapdata <- left_join(mapdata, country_dat, by = "region")
-  mapdata <- filter(mapdata, count != 0)
-  
-  mapplot <- ggplot(mapdata, aes(x = long, y = lat, group = group, text = texts)) +
-    geom_polygon(aes(fill = count)) +
-    scale_fill_gradient(name = "sScale", trans = "log", breaks = c(1,10,50,250)) +
-    ggtitle("Release Count by Country")
-  interactive <- plotly::ggplotly(mapplot)
-  
-  return(interactive)
-}
-```
-
-```{r}
-map <- plot_countries(raw_data)
-for (i in 1:length(map$x$data)) {
-  text_pre <- map$x$data[[i]]$text
-  text_post <- strsplit(text_pre, "<")[[1]][1]
-  map$x$data[[i]]$text <- text_post
-}
-map
-```
 
 ```{r}
 plot_countries <- function(dat) {
@@ -213,7 +87,7 @@ plot_countries <- function(dat) {
   
   country_dat <- data.frame(region = as.character(),
                              count = as.numeric(),
-                            format = as.character())
+                            Format = as.character())
   
   mapdata <- map_data("world")
 
@@ -231,7 +105,7 @@ plot_countries <- function(dat) {
   }
   
   country_dat$count <- as.numeric(country_dat$count)
-  country_dat$format <- as.factor(country_dat$format)
+  country_dat$Format <- as.factor(country_dat$Format)
   
   country_dat <- country_dat[order(country_dat$count, decreasing = T),]
 
@@ -239,9 +113,9 @@ plot_countries <- function(dat) {
   for (i in 1:nrow(country_dat)) {
     country_name <- country_dat[i,]$region
     count <- country_dat[i,]$count
-    format <- country_dat[i,]$format
+    Format <- country_dat[i,]$Format
     
-    text = paste(paste(paste(paste(country_name, "Count:", sep = "\n"), count, sep = " "), '\nMajor Format:'), format, sep = ' ')
+    text = paste(paste(paste(paste(country_name, "Count:", sep = "\n"), count, sep = " "), '\nMajor Format:'), Format, sep = ' ')
     texts[length(texts)+1] <- text
   }
   
@@ -251,11 +125,18 @@ plot_countries <- function(dat) {
   mapdata <- filter(mapdata, count != 0)
   
   mapplot <- ggplot(mapdata, aes(x = long, y = lat, group = group, text = texts)) +
-    geom_polygon(aes(fill = count, colour = format)) +
-    scale_fill_gradient(name = "Scale", trans = "log") +
+    geom_polygon(aes(fill = count, colour = Format)) +
+    scale_fill_viridis_c(option ="plasma", name = "Number of Releases", trans = "log", breaks = c(1, 10, 100, 10000, 100000, 1000000, 10000000)) +
     ggtitle("Discogs Release Data by Country, Format") +
-    xlab("Longitude") +
-    ylab("Latitude")
+    # xlab("Longitude") +
+    # ylab("Latitude") +
+    theme_economist() +
+    theme(axis.line=element_blank(),axis.text.x=element_blank(),
+          axis.text.y=element_blank(),axis.ticks=element_blank(),
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank(),
+          panel.border=element_blank(),panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank())
   interactive <- plotly::ggplotly(mapplot)
   
   return(interactive)
@@ -263,12 +144,21 @@ plot_countries <- function(dat) {
 ```
 
 ```{r}
-map <- plot_countries(raw_data)
-for (i in 1:length(map$x$data)) {
-  text_pre <- map$x$data[[i]]$text
-  text_post <- strsplit(text_pre, "<")[[1]][1]
-  map$x$data[[i]]$text <- text_post
+mapit <- function(map) {
+  out <- tryCatch(
+    {
+      for (i in 1:length(map$x$data)) {
+        text_pre <- map$x$data[[i]]$text
+        text_post <- strsplit(text_pre, "<")[[1]][1]
+        map$x$data[[i]]$text <- text_post
+      }
+    }, error=function(cond) {
+      return(map)
+    }
+  )
+  
+  return(map)
 }
-map
+mapit(plot_countries(raw_data))
 ```
 
