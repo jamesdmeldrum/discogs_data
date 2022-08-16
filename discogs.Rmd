@@ -195,4 +195,80 @@ for (i in 1:length(map$x$data)) {
 map
 ```
 
+```{r}
+plot_countries <- function(dat) {
+  dat[dat == "United Kingdom"] <- "UK"
+  dat[dat == "United States of America"] <- "USA"
+  dat[dat == "US"] <- "USA"
+  country_counts <- dat %>%
+    group_by(country) %>%
+    summarise(counts = n())
+  country_counts <- country_counts[order(country_counts$counts, decreasing = TRUE),]
+  
+  country_formats <- dat %>%
+    group_by(country) %>%
+    count(country, format_) %>%
+    slice(which.max(n))
+  # head(country_counts)
+  
+  country_dat <- data.frame(region = as.character(),
+                             count = as.numeric(),
+                            format = as.character())
+  
+  mapdata <- map_data("world")
+
+  for (cntry in unique(mapdata$region)) {
+      count_row <- filter(country_counts, country == cntry)
+      format_row <- filter(country_formats, country == cntry)
+      if (nrow(count_row) == 0) {
+        num <- 0
+        form <- NA
+      } else {
+        num <- count_row$counts
+        form <- format_row$format_
+      }
+      country_dat[nrow(country_dat)+1,] <- c(cntry, num, form)
+  }
+  
+  country_dat$count <- as.numeric(country_dat$count)
+  country_dat$format <- as.factor(country_dat$format)
+  
+  country_dat <- country_dat[order(country_dat$count, decreasing = T),]
+
+  texts <- c()
+  for (i in 1:nrow(country_dat)) {
+    country_name <- country_dat[i,]$region
+    count <- country_dat[i,]$count
+    format <- country_dat[i,]$format
+    
+    text = paste(paste(paste(paste(country_name, "Count:", sep = "\n"), count, sep = " "), '\nMajor Format:'), format, sep = ' ')
+    texts[length(texts)+1] <- text
+  }
+  
+  country_dat$texts <- texts
+  
+  mapdata <- left_join(mapdata, country_dat, by = "region")
+  mapdata <- filter(mapdata, count != 0)
+  
+  mapplot <- ggplot(mapdata, aes(x = long, y = lat, group = group, text = texts)) +
+    geom_polygon(aes(fill = count, colour = format)) +
+    scale_fill_gradient(name = "Scale", trans = "log") +
+    ggtitle("Discogs Release Data by Country, Format") +
+    xlab("Longitude") +
+    ylab("Latitude")
+  interactive <- plotly::ggplotly(mapplot)
+  
+  return(interactive)
+}
+```
+
+```{r}
+map <- plot_countries(raw_data)
+for (i in 1:length(map$x$data)) {
+  text_pre <- map$x$data[[i]]$text
+  text_post <- strsplit(text_pre, "<")[[1]][1]
+  map$x$data[[i]]$text <- text_post
+}
+map
+```
 
